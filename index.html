@@ -74,6 +74,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 .pass-stub { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
 .clock { font-family: var(--mono); font-weight: 500; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
 .clock.up { color: var(--red); }
+#mclock { font-size: 34px; margin-top: 4px; }
 .meter { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .meter > i { display: block; height: 100%; width: 100%; background: var(--blue); transform-origin: left; transition: transform .25s linear; }
 .memo-saved { font-size: 16px; font-weight: 500; }
@@ -85,6 +86,12 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 .mcard.open.name, .mcard.done.name { border-top: 4px solid var(--blue); }
 .mcard.open.memo, .mcard.done.memo { border-top: 4px solid var(--red); }
 .mcard.done { opacity: .6; cursor: default; }
+.grid.c4 .mcard { min-height: 76px; font-size: 14px; }
+.grid.c5 { gap: 6px; }
+.grid.c5 .mcard { min-height: 62px; padding: 4px 2px; font-size: 12.5px; border-radius: 8px; }
+.mcard.peek { color: var(--ink); background: var(--card); font-weight: 900; cursor: default; }
+.mcard.peek.name { border-top: 4px solid var(--blue); }
+.mcard.peek.memo { border-top: 4px solid var(--red); }
 .countdown { font-family: var(--mono); font-weight: 500; font-size: 120px; line-height: 1; text-align: center; color: var(--red); padding: 40px 0; font-variant-numeric: tabular-nums; }
 .board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .brow { display: grid; grid-template-columns: 28px 1fr auto; grid-template-areas: "pos name score" "pos det det"; column-gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); }
@@ -134,17 +141,15 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       <p class="note" id="inviteUrl" style="word-break: break-all;"></p>
     </div>
     <div>
-      <div class="mono" style="margin-bottom: 8px;">已加入（<span id="pcount">0</span> / 12）</div>
+      <div class="mono" style="margin-bottom: 8px;">已加入（<span id="pcount">0</span> / 15）</div>
       <div class="chips" id="lobbyPlayers"></div>
     </div>
     <div id="hostSettings" class="box" hidden>
       <span class="mono">題目類別</span>
       <div class="cats" id="cats"></div>
       <div class="row">
-        <label class="row note" for="introSecs">自介秒數
-          <select id="introSecs"><option value="30">30</option><option value="45">45</option><option value="60">60</option><option value="90">90</option></select></label>
         <label class="row note" for="matchSecs">翻牌限時
-          <select id="matchSecs"><option value="120">120</option><option value="180">180</option><option value="240">240</option><option value="300">300</option></select></label>
+          <select id="matchSecs"><option value="0">自動（每人 20 秒）</option><option value="120">120 秒</option><option value="180">180 秒</option><option value="300">300 秒</option><option value="450">450 秒</option><option value="600">600 秒</option></select></label>
       </div>
       <button class="btn primary" id="startBtn" type="button">開始遊戲</button>
       <p class="note">至少 2 人才能開始。開始後新朋友就不能再加入。</p>
@@ -163,31 +168,19 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
         <p class="memo-saved" id="memoSaved" hidden></p>
         <div id="memoBox" class="box" hidden>
           <label class="f" for="memoIn"><span class="mono" id="memoLabel">我的答案</span>
-            <input type="text" id="memoIn" maxlength="12" placeholder="用短短一句回答，例如：愛吃麻辣鍋" autocomplete="off"></label>
-          <div class="row">
-            <button class="btn" id="memoBtn" type="button">儲存答案</button>
-            <button class="btn primary" id="myNextBtn" type="button">講完了，下一位</button>
-          </div>
-          <p class="note">不用等倒數結束，講完隨時可以按下一位，會自動幫你存答案。答案會變成翻牌的卡片，12 字內。</p>
+            <input type="text" id="memoIn" maxlength="8" placeholder="8 字內，例如：愛吃麻辣鍋" autocomplete="off"></label>
+          <button class="btn primary" id="memoBtn" type="button">儲存答案</button>
+          <p class="note">答案會變成翻牌的卡片。存好後，主持人會按下一位。</p>
         </div>
         <p class="warn" id="introWarn" role="alert"></p>
       </div>
-      <hr class="tear">
-      <div class="pass-stub">
-        <span class="mono">登機倒數 Boarding</span>
-        <div class="clock" id="clock">60</div>
-        <div class="meter"><i id="meter"></i></div>
-        <div class="row" id="turnCtl" hidden>
-          <button class="btn" id="timerBtn" type="button">開始計時</button>
-          <button class="btn" id="rerollBtn" type="button">換一題</button>
-        </div>
-      </div>
     </article>
-    <div class="row" id="firstRow" hidden><button class="btn primary" id="firstBtn" type="button">抽出第一位</button></div>
-    <div class="box" id="doneBox" hidden>
-      <p class="dest" style="margin:0;">所有人都介紹完了！</p>
-      <button class="btn primary" id="toMatchBtn" type="button" hidden>開始翻牌（大家同時開始）</button>
-      <p class="note" id="doneWait">等主持人按開始，大家會同時開始翻牌。</p>
+    <div class="box" id="hostCtl" hidden>
+      <div class="row">
+        <button class="btn primary" id="hostNextBtn" type="button">抽出第一位</button>
+        <button class="btn" id="rerollBtn" type="button" hidden>換一題</button>
+      </div>
+      <p class="note" id="hostHint"></p>
     </div>
     <p class="note" id="introWait"></p>
     <div><div class="mono" style="margin-bottom: 8px;">本輪進度</div><div class="chips" id="introPlayers"></div></div>
@@ -197,15 +190,15 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   <section id="s-match" hidden>
     <div class="box" id="readyBox" hidden>
       <p class="dest" style="margin:0;">所有人都介紹完了，準備翻牌競賽！</p>
-      <p class="note">每個人在自己手機上，把「名字」和「他的答案」配成一對。全部配完就停錶，成績 ＝ 秒數 ＋ 翻錯次數 × 2 秒，越少越好。</p>
+      <p class="note">每個人在自己手機上，把「名字」和「他的答案」配成一對。全部配完就停錶，開始時所有牌會先翻開 20 秒讓你記位置，蓋回去後才開始計時。成績 ＝ 秒數 ＋ 翻錯次數 × 0.2 秒，越少越好。</p>
       <div class="chips" id="readyPlayers"></div>
       <button class="btn primary" id="goBtn" type="button" hidden>開始翻牌（大家同時開始）</button>
-      <p class="note" id="readyWait">等主持人按開始，大家會一起倒數 3 秒後開始。</p>
+      <p class="note" id="readyWait">等主持人按開始，大家會一起倒數 3 秒，接著看牌 20 秒，再開始計時。</p>
     </div>
     <div id="playArea">
     <div class="row" style="justify-content: space-between;">
       <span class="mono">已配對 <b id="mcount">0 / 0</b></span>
-      <span class="mono">翻錯 <b id="mwrong">0</b> 次（每次 +2 秒）</span>
+      <span class="mono">翻錯 <b id="mwrong">0</b> 次（每次 +0.2 秒）</span>
     </div>
     <div class="row" style="justify-content: space-between; align-items: baseline;">
       <div class="clock" id="mclock">0.0</div>
@@ -218,7 +211,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     <div class="box">
       <span class="mono">排行榜 Leaderboard</span>
       <ol class="board" id="board"></ol>
-      <p class="note">成績 ＝ 完成秒數 ＋ 翻錯次數 × 2 秒。時間到沒完成的排在後面。</p>
+      <p class="note">成績 ＝ 完成秒數 ＋ 翻錯次數 × 0.2 秒。時間到沒完成的排在後面。</p>
     </div>
     </div>
     <div class="row" id="matchHost" hidden>
@@ -241,7 +234,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 (function () {
   "use strict";
   var PEER_OPTS = /*PEEROPTS*/{};
-  var NAME_MAX = 8, MEMO_MAX = 12, MAX_PLAYERS = 12, PREFIX = "icebreaker-tw-v1-", PENALTY = 2, COUNTDOWN = 3;
+  var NAME_MAX = 8, MEMO_MAX = 8, MAX_PLAYERS = 15, PREFIX = "icebreaker-tw-v1-", PENALTY = 0.2, COUNTDOWN = 3, PREVIEW = 20, SECS_PER_PLAYER = 20;
   var BANK = {
     "自介填空": ["我最近迷上＿＿", "我出門一定會帶＿＿", "我的人生主題曲是＿＿", "如果我是一種零食，我是＿＿", "我最怕＿＿", "我最愛吃＿＿"],
     "旅行": ["你最想去哪個地方？", "你最難忘的旅行地點是？", "旅行時你最怕遇到什麼？", "你是計畫派還是隨興派？", "出遊時你通常負責拍照、吃、還是睡？", "你最想去的國家是？"],
@@ -257,7 +250,6 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   var conns = [];          // host only: [{conn, name}]
   var S = null;            // host only: authoritative state
   var view = null;         // last shared state on this phone
-  var introT = null;
   var lastCur = null, lastLeft = null;
   var LM = null;           // this phone's own memory game
   var lmTick = null;
@@ -281,17 +273,16 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   // ================= HOST =================
   function freshState() {
     return { phase: "lobby", players: [], current: null, prompt: "", warn: "", introDone: false,
-      cats: { "自介填空": true, "旅行": true, "輕鬆": true }, introSecs: 60, matchSecs: 180,
-      tleft: 60, ttotal: 60, trun: false, used: {}, round: 0, deck: [], results: {} };
+      cats: { "自介填空": true, "旅行": true, "輕鬆": true }, matchSecs: 0, limit: 0,
+      used: {}, round: 0, deck: [], results: {} };
   }
   function player(name) { return S.players.filter(function (p) { return p.name === name; })[0]; }
   function makeView() {
     var cur = S.current ? player(S.current) : null;
     return {
-      room: me.room, phase: S.phase, warn: S.warn, cats: S.cats, introSecs: S.introSecs, matchSecs: S.matchSecs,
+      room: me.room, phase: S.phase, warn: S.warn, cats: S.cats, matchSecs: S.matchSecs, limit: S.limit,
       players: S.players.map(function (p) { return { name: p.name, online: p.online, picked: p.picked, host: !!p.host }; }),
       current: S.current, curOnline: cur ? cur.online : false, prompt: S.prompt, curMemo: cur ? cur.memo : "", introDone: S.introDone,
-      tleft: S.tleft, ttotal: S.ttotal, trun: S.trun,
       round: S.round, deck: S.deck, results: S.results, go: !!S.go
     };
   }
@@ -302,7 +293,6 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     conns.forEach(function (c) { try { if (c.conn.open) c.conn.send({ t: "state", v: v }); } catch (e) {} });
     view = v; render();
   }
-  function stopIntroT() { if (introT) { clearInterval(introT); introT = null; } S.trun = false; }
   function isHostName(n) { var p = player(n); return !!(p && p.host); }
   // The person on stage controls their own turn; the host only steps in when that person is offline.
   function canControlTurn(by) {
@@ -354,7 +344,6 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   function hostAction(by, msg) {
     if (msg.t === "memo") setMemo(by, msg.text);
     else if (msg.t === "next") drawNext(by);
-    else if (msg.t === "timer") toggleTimer(by);
     else if (msg.t === "reroll") reroll(by);
     else if (msg.t === "result") setResult(by, msg);
   }
@@ -372,7 +361,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       p.online = true;
     } else {
       if (S.phase !== "lobby") { reject("started", "遊戲已經開始，無法再加入。"); return; }
-      if (S.players.length >= MAX_PLAYERS) { reject("full", "房間已滿（最多 12 人）。"); return; }
+      if (S.players.length >= MAX_PLAYERS) { reject("full", "房間已滿（最多 15 人）。"); return; }
       S.players.push({ name: name, memo: "", picked: false, online: true, dev: dev });
     }
     conns.push({ conn: conn, name: name, seen: Date.now() });
@@ -411,22 +400,19 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     S.players.forEach(function (p) { p.memo = ""; p.picked = false; });
     S.phase = "intro"; S.current = null; S.prompt = ""; S.warn = ""; S.used = {}; S.introDone = false;
     S.deck = []; S.results = {}; S.go = false;
-    stopIntroT(); S.tleft = S.ttotal = S.introSecs;
     bc();
   }
+  // Only the host moves the turn along; a turn can't end until its answer is saved.
   function drawNext(by) {
-    if (S.phase !== "intro" || S.introDone) return;
+    if (S.phase !== "intro" || S.introDone || !isHostName(by)) return;
     if (S.current) {
-      if (!canControlTurn(by)) return;
       var cur = player(S.current);
-      if (!cur || !cur.memo) { S.warn = "請先儲存答案，再按下一位。"; bc(); return; }
-    } else if (!isHostName(by)) return;   // only the host draws the very first person
+      if (!cur || !cur.memo) { S.warn = "還在等 " + S.current + " 儲存答案。"; bc(); return; }
+    }
     var rest = S.players.filter(function (p) { return !p.picked; });
-    stopIntroT();
     if (!rest.length) { S.current = null; S.prompt = ""; S.warn = ""; S.introDone = true; prepareMatch(); bc(); return; }
     var p = rest[Math.floor(Math.random() * rest.length)];
     p.picked = true; S.current = p.name; S.prompt = nextPrompt(); S.warn = "";
-    S.tleft = S.ttotal = S.introSecs;
     bc();
   }
   function setMemo(by, text) {
@@ -437,22 +423,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     player(S.current).memo = m; S.warn = "";
     bc();
   }
-  function toggleTimer(by) {
-    if (!isHostName(by)) return;   // only the host runs the clock
-    if (introT) { stopIntroT(); bc(); return; }
-    if (S.tleft <= 0) S.tleft = S.ttotal;
-    S.trun = true;
-    introT = setInterval(function () {
-      S.tleft -= 1;
-      if (S.tleft <= 0) { S.tleft = 0; stopIntroT(); }
-      bc();
-    }, 1000);
-    bc();
-  }
   function reroll(by) { if (S.current && isHostName(by)) { S.prompt = nextPrompt(); bc(); } }
   // Everyone lands on the match screen; nothing starts until the host presses go.
   function prepareMatch() {
-    stopIntroT();
     S.deck = S.players.map(function (p) { return { name: p.name, memo: p.memo }; });
     S.results = {}; S.go = false; S.phase = "match";
   }
@@ -460,6 +433,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     if (S.phase !== "match") return;
     S.results = {};
     S.players.forEach(function (p) { S.results[p.name] = { status: "playing", pairs: 0, wrong: 0, secs: 0 }; });
+    S.limit = S.matchSecs || S.deck.length * SECS_PER_PLAYER;
     S.round += 1; S.go = true;
     bc();
   }
@@ -470,12 +444,11 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     r.wrong = Math.max(0, parseInt(msg.wrong, 10) || 0);
     if (msg.status === "done" || msg.status === "timeout") {
       r.status = msg.status;
-      r.secs = Math.max(0, Math.min(S.matchSecs, Number(msg.secs) || 0));
+      r.secs = Math.max(0, Math.min(S.limit, Number(msg.secs) || 0));
     }
     bc();
   }
   function backToLobby() {
-    stopIntroT();
     S.phase = "lobby"; S.current = null; S.prompt = ""; S.warn = ""; S.introDone = false; S.deck = []; S.results = {}; S.go = false;
     S.players = S.players.filter(function (p) { return p.online; });
     S.players.forEach(function (p) { p.memo = ""; p.picked = false; });
@@ -571,8 +544,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     });
     var mine = v.results[me.name];
     LM = { round: v.round, cards: shuffle(cards), open: [], matched: 0, wrong: 0, lock: false,
-      limit: v.matchSecs, t0: 0, elapsed: 0, state: "countdown", cdEnd: performance.now() + COUNTDOWN * 1000,
-      msg: "準備好了嗎？倒數結束就開始，大家同時起跑！" };
+      limit: v.limit, t0: 0, elapsed: 0, state: "countdown", cdEnd: performance.now() + COUNTDOWN * 1000,
+      pvEnd: 0, btns: null,
+      msg: "準備好了嗎？倒數結束後，所有牌會翻開 " + PREVIEW + " 秒讓你記位置。" };
     if (mine && mine.status !== "playing") {
       // Already finished this round (e.g. page reopened): keep the recorded result.
       LM.state = "over"; LM.matched = mine.pairs; LM.wrong = mine.wrong; LM.elapsed = mine.secs;
@@ -586,8 +560,13 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     if (!LM) return;
     var now = performance.now();
     if (LM.state === "countdown") {
-      if (now >= LM.cdEnd) { LM.state = "play"; LM.t0 = now; LM.msg = "開始！把名字配到他的答案。"; renderMatchLocal(); }
+      if (now >= LM.cdEnd) { LM.state = "preview"; LM.pvEnd = now + PREVIEW * 1000; LM.msg = "記住每張牌的位置！"; renderMatchLocal(); }
       else renderCountdown(Math.ceil((LM.cdEnd - now) / 1000));
+      return;
+    }
+    if (LM.state === "preview") {
+      if (now >= LM.pvEnd) { LM.state = "play"; LM.t0 = now; LM.msg = "牌蓋回去了，開始計時！把名字配到他的答案。"; renderMatchLocal(); }
+      else renderPreviewClock(Math.ceil((LM.pvEnd - now) / 1000));
       return;
     }
     if (LM.state !== "play") return;
@@ -597,7 +576,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   }
   function finishLocal(status) {
     LM.state = "over"; stopLocal();
-    var score = LM.elapsed + LM.wrong * PENALTY;
+    var score = LM.elapsed + LM.wrong * PENALTY;   // shown with one decimal
     LM.msg = status === "done"
       ? "完成！" + fmt(LM.elapsed) + " 秒，翻錯 " + LM.wrong + " 次，成績 " + fmt(score) + " 秒。"
       : "時間到！你配對了 " + LM.matched + " / " + LM.cards.length / 2 + " 對。";
@@ -684,7 +663,6 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
         });
         box.appendChild(b);
       });
-      if (document.activeElement !== $("introSecs")) $("introSecs").value = String(v.introSecs);
       if (document.activeElement !== $("matchSecs")) $("matchSecs").value = String(v.matchSecs);
       $("startBtn").disabled = v.players.length < 2;
     }
@@ -699,27 +677,25 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     $("pName").textContent = v.current || (v.introDone ? "全員登機" : "等待登機");
     $("pDest").textContent = v.current ? v.prompt : (v.introDone ? "每個人都介紹完了。" : "主持人抽出第一位就開始。");
     $("memoBox").hidden = !control;
-    $("memoLabel").textContent = mine ? "輪到你了！講完後寫下你的答案" : v.current + " 不在線，主持人代填答案";
+    $("memoLabel").textContent = mine ? "輪到你了！講完後寫下你的答案（8 字內）" : v.current + " 不在線，主持人代填答案";
     if (v.current !== lastCur) { $("memoIn").value = ""; lastCur = v.current; }
     var saved = $("memoSaved");
     if (v.current && v.curMemo) { saved.hidden = false; saved.textContent = ""; saved.appendChild(document.createTextNode("答案：")); var b = document.createElement("b"); b.textContent = v.curMemo; saved.appendChild(b); }
     else if (v.current) { saved.hidden = false; saved.textContent = v.current + " 正在回答…"; }
     else saved.hidden = true;
     $("memoBtn").textContent = v.curMemo ? "修改答案" : "儲存答案";
-    $("myNextBtn").textContent = rest > 0 ? "講完了，下一位" : "我是最後一位，完成";
     $("introWarn").textContent = control || me.host ? (v.warn || "") : "";
-    $("clock").textContent = v.tleft > 0 ? String(v.tleft) : "時間到";
-    $("clock").className = "clock" + (v.tleft <= 10 ? " up" : "");
-    $("meter").style.transform = "scaleX(" + (v.ttotal ? v.tleft / v.ttotal : 0) + ")";
-    if (lastLeft !== null && lastLeft > 0 && v.tleft === 0) { try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {} }
-    lastLeft = v.tleft;
-    $("turnCtl").hidden = !(v.current && me.host);
-    $("timerBtn").textContent = v.trun ? "暫停" : (v.tleft <= 0 ? "再計時一次" : "開始計時");
-    $("firstRow").hidden = !(me.host && !v.current && !v.introDone);
-    $("doneBox").hidden = true;
+    $("hostCtl").hidden = !me.host;
+    if (me.host) {
+      var waiting = !!v.current && !v.curMemo;
+      $("hostNextBtn").textContent = !v.current && picked === 0 ? "抽出第一位" : (rest > 0 ? "下一位（隨機）" : "完成，進入翻牌");
+      $("hostNextBtn").disabled = waiting;
+      $("rerollBtn").hidden = !v.current || !!v.curMemo;
+      $("hostHint").textContent = waiting ? "等 " + v.current + " 儲存答案後，才能按下一位。" : (v.current ? v.current + " 已存好答案。" : "");
+    }
     var wait = "";
-    if (!v.current && !v.introDone && !me.host) wait = "等主持人抽出第一位。";
-    else if (v.current && !control) wait = "現在是 " + v.current + " 的時間，他講完會自己按下一位。" + (me.host ? "計時和換題由你控制。" : "");
+    if (!v.current && !me.host) wait = "等主持人抽出第一位。";
+    else if (v.current && !control && !me.host) wait = v.curMemo ? "等主持人按下一位。" : "現在是 " + v.current + " 的時間。";
     $("introWait").textContent = wait; $("introWait").hidden = !wait;
     playerChips($("introPlayers"), v, "intro");
   }
@@ -732,6 +708,11 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     $("mmeter").style.transform = "scaleX(1)";
     $("mcount").textContent = "0 / " + LM.cards.length / 2;
     $("mwrong").textContent = "0";
+  }
+  function renderPreviewClock(n) {
+    $("mclock").textContent = "看牌 " + n;
+    $("mclock").className = "clock" + (n <= 5 ? " up" : "");
+    $("mmeter").style.transform = "scaleX(" + Math.max(0, n / PREVIEW) + ")";
   }
   function renderClockLocal() {
     $("mclock").textContent = fmt(LM.elapsed);
@@ -746,19 +727,34 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     $("mwrong").textContent = String(LM.wrong);
     $("mlimit").textContent = "限時 " + LM.limit + " 秒";
     $("mmsg").textContent = LM.msg;
-    renderClockLocal();
-    var g = $("grid"); g.textContent = "";
-    g.style.setProperty("--cols", LM.cards.length > 12 ? "4" : "3");
+    if (LM.state === "preview") renderPreviewClock(Math.ceil((LM.pvEnd - performance.now()) / 1000));
+    else renderClockLocal();
+    var g = $("grid");
+    // Build the buttons once per round and update them in place, so a tap is never lost
+    // when another player's progress arrives and the screen refreshes.
+    if (!LM.btns) {
+      g.textContent = "";
+      var n = LM.cards.length, cols = n > 20 ? 5 : (n > 12 ? 4 : 3);
+      g.style.setProperty("--cols", String(cols));
+      g.className = "grid c" + cols;
+      LM.btns = LM.cards.map(function (c, i) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.addEventListener("click", function () { localFlip(i); });
+        g.appendChild(b);
+        return b;
+      });
+    }
+    var peek = LM.state === "preview";
     LM.cards.forEach(function (c, i) {
-      var open = LM.open.indexOf(i) > -1;
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "mcard " + c.kind + (c.done ? " done" : (open ? " open" : ""));
-      b.textContent = (c.done || open) ? c.text : "";
-      b.setAttribute("aria-label", (c.done || open) ? c.text : "蓋住的牌");
-      b.disabled = LM.state !== "play";
-      b.addEventListener("click", function () { localFlip(i); });
-      g.appendChild(b);
+      var open = LM.open.indexOf(i) > -1, shown = c.done || open || peek;
+      var b = LM.btns[i];
+      var cls = "mcard " + c.kind + (c.done ? " done" : (open ? " open" : (peek ? " peek" : "")));
+      if (b.className !== cls) b.className = cls;
+      var t = shown ? c.text : "";
+      if (b.textContent !== t) b.textContent = t;
+      b.setAttribute("aria-label", shown ? c.text : "蓋住的牌");
+      b.disabled = LM.state !== "play" || c.done;
     });
   }
   function renderBoard(v) {
@@ -829,16 +825,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
         function () { $("inviteMsg").textContent = "請長按下方網址手動複製"; });
     } catch (e) { $("inviteMsg").textContent = "請長按下方網址手動複製"; }
   });
-  $("introSecs").addEventListener("change", function () { if (me.host) { S.introSecs = parseInt(this.value, 10); bc(); } });
   $("matchSecs").addEventListener("change", function () { if (me.host) { S.matchSecs = parseInt(this.value, 10); bc(); } });
   $("startBtn").addEventListener("click", function () { if (me.host) startGame(); });
-  $("firstBtn").addEventListener("click", function () { act({ t: "next" }); });
-  $("myNextBtn").addEventListener("click", function () {
-    var typed = $("memoIn").value.trim();
-    if (typed && (!view || typed !== view.curMemo)) act({ t: "memo", text: typed });  // save what they typed first
-    act({ t: "next" });
-  });
-  $("timerBtn").addEventListener("click", function () { act({ t: "timer" }); });
+  $("hostNextBtn").addEventListener("click", function () { if (me.host) drawNext(me.name); });
   $("rerollBtn").addEventListener("click", function () { act({ t: "reroll" }); });
   $("memoBtn").addEventListener("click", function () { act({ t: "memo", text: $("memoIn").value }); });
   $("memoIn").addEventListener("keydown", function (e) { if (e.key === "Enter") act({ t: "memo", text: $("memoIn").value }); });
