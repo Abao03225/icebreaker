@@ -161,9 +161,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
             <input type="text" id="memoIn" maxlength="12" placeholder="用短短一句回答，例如：愛吃麻辣鍋" autocomplete="off"></label>
           <div class="row">
             <button class="btn" id="memoBtn" type="button">儲存答案</button>
-            <button class="btn primary" id="myNextBtn" type="button" disabled>下一位（隨機）</button>
+            <button class="btn primary" id="myNextBtn" type="button">講完了，下一位</button>
           </div>
-          <p class="note">答案會變成翻牌遊戲的卡片，12 字內。</p>
+          <p class="note">不用等倒數結束，講完隨時可以按下一位，會自動幫你存答案。答案會變成翻牌的卡片，12 字內。</p>
         </div>
         <p class="warn" id="introWarn" role="alert"></p>
       </div>
@@ -190,6 +190,14 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 
   <!-- MATCH -->
   <section id="s-match" hidden>
+    <div class="box" id="readyBox" hidden>
+      <p class="dest" style="margin:0;">所有人都介紹完了，準備翻牌競賽！</p>
+      <p class="note">每個人在自己手機上，把「名字」和「他的答案」配成一對。全部配完就停錶，成績 ＝ 秒數 ＋ 翻錯次數 × 2 秒，越少越好。</p>
+      <div class="chips" id="readyPlayers"></div>
+      <button class="btn primary" id="goBtn" type="button" hidden>開始翻牌（大家同時開始）</button>
+      <p class="note" id="readyWait">等主持人按開始，大家會一起倒數 3 秒後開始。</p>
+    </div>
+    <div id="playArea">
     <div class="row" style="justify-content: space-between;">
       <span class="mono">已配對 <b id="mcount">0 / 0</b></span>
       <span class="mono">翻錯 <b id="mwrong">0</b> 次（每次 +2 秒）</span>
@@ -206,6 +214,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       <span class="mono">排行榜 Leaderboard</span>
       <ol class="board" id="board"></ol>
       <p class="note">成績 ＝ 完成秒數 ＋ 翻錯次數 × 2 秒。時間到沒完成的排在後面。</p>
+    </div>
     </div>
     <div class="row" id="matchHost" hidden>
       <button class="btn" id="replayBtn" type="button">再玩一輪</button>
@@ -277,7 +286,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       players: S.players.map(function (p) { return { name: p.name, online: p.online, picked: p.picked, host: !!p.host }; }),
       current: S.current, curOnline: cur ? cur.online : false, prompt: S.prompt, curMemo: cur ? cur.memo : "", introDone: S.introDone,
       tleft: S.tleft, ttotal: S.ttotal, trun: S.trun,
-      round: S.round, deck: S.deck, results: S.results
+      round: S.round, deck: S.deck, results: S.results, go: !!S.go
     };
   }
   function bc() {
@@ -372,7 +381,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     if (S.players.length < 2) return;
     S.players.forEach(function (p) { p.memo = ""; p.picked = false; });
     S.phase = "intro"; S.current = null; S.prompt = ""; S.warn = ""; S.used = {}; S.introDone = false;
-    S.deck = []; S.results = {};
+    S.deck = []; S.results = {}; S.go = false;
     stopIntroT(); S.tleft = S.ttotal = S.introSecs;
     bc();
   }
@@ -385,7 +394,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     } else if (!isHostName(by)) return;   // only the host draws the very first person
     var rest = S.players.filter(function (p) { return !p.picked; });
     stopIntroT();
-    if (!rest.length) { S.current = null; S.prompt = ""; S.warn = ""; S.introDone = true; bc(); return; }
+    if (!rest.length) { S.current = null; S.prompt = ""; S.warn = ""; S.introDone = true; prepareMatch(); bc(); return; }
     var p = rest[Math.floor(Math.random() * rest.length)];
     p.picked = true; S.current = p.name; S.prompt = nextPrompt(); S.warn = "";
     S.tleft = S.ttotal = S.introSecs;
@@ -400,7 +409,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     bc();
   }
   function toggleTimer(by) {
-    if (!(canControlTurn(by) || isHostName(by))) return;
+    if (!isHostName(by)) return;   // only the host runs the clock
     if (introT) { stopIntroT(); bc(); return; }
     if (S.tleft <= 0) S.tleft = S.ttotal;
     S.trun = true;
@@ -411,14 +420,18 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     }, 1000);
     bc();
   }
-  function reroll(by) { if (S.current && (canControlTurn(by) || isHostName(by))) { S.prompt = nextPrompt(); bc(); } }
-  function startMatch() {
-    if (!S.introDone) return;
+  function reroll(by) { if (S.current && isHostName(by)) { S.prompt = nextPrompt(); bc(); } }
+  // Everyone lands on the match screen; nothing starts until the host presses go.
+  function prepareMatch() {
     stopIntroT();
     S.deck = S.players.map(function (p) { return { name: p.name, memo: p.memo }; });
+    S.results = {}; S.go = false; S.phase = "match";
+  }
+  function startMatch() {
+    if (S.phase !== "match") return;
     S.results = {};
     S.players.forEach(function (p) { S.results[p.name] = { status: "playing", pairs: 0, wrong: 0, secs: 0 }; });
-    S.round += 1; S.phase = "match";
+    S.round += 1; S.go = true;
     bc();
   }
   function setResult(by, msg) {
@@ -434,7 +447,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   }
   function backToLobby() {
     stopIntroT();
-    S.phase = "lobby"; S.current = null; S.prompt = ""; S.warn = ""; S.introDone = false; S.deck = []; S.results = {};
+    S.phase = "lobby"; S.current = null; S.prompt = ""; S.warn = ""; S.introDone = false; S.deck = []; S.results = {}; S.go = false;
     S.players = S.players.filter(function (p) { return p.online; });
     S.players.forEach(function (p) { p.memo = ""; p.picked = false; });
     bc();
@@ -576,9 +589,17 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     else if (v.phase === "intro") { show("intro"); renderIntro(v); }
     else {
       show("match");
+      $("readyBox").hidden = v.go;
+      $("playArea").hidden = !v.go;
+      $("matchHost").hidden = !(me.host && v.go);
+      if (!v.go) {
+        $("goBtn").hidden = !me.host; $("readyWait").hidden = me.host;
+        playerChips($("readyPlayers"), v, "lobby");
+        if (LM) { stopLocal(); LM = null; }
+        return;
+      }
       if (!LM || LM.round !== v.round) initLocalMatch(v);
       renderMatchLocal(); renderBoard(v);
-      $("matchHost").hidden = !me.host;
     }
   }
   function renderLobby(v) {
@@ -623,23 +644,20 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
     else if (v.current) { saved.hidden = false; saved.textContent = v.current + " 正在回答…"; }
     else saved.hidden = true;
     $("memoBtn").textContent = v.curMemo ? "修改答案" : "儲存答案";
-    $("myNextBtn").disabled = !v.curMemo;
-    $("myNextBtn").textContent = rest > 0 ? "下一位（隨機）" : "我是最後一位，完成";
+    $("myNextBtn").textContent = rest > 0 ? "講完了，下一位" : "我是最後一位，完成";
     $("introWarn").textContent = control || me.host ? (v.warn || "") : "";
     $("clock").textContent = v.tleft > 0 ? String(v.tleft) : "時間到";
     $("clock").className = "clock" + (v.tleft <= 10 ? " up" : "");
     $("meter").style.transform = "scaleX(" + (v.ttotal ? v.tleft / v.ttotal : 0) + ")";
     if (lastLeft !== null && lastLeft > 0 && v.tleft === 0) { try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {} }
     lastLeft = v.tleft;
-    $("turnCtl").hidden = !(v.current && (control || me.host));
+    $("turnCtl").hidden = !(v.current && me.host);
     $("timerBtn").textContent = v.trun ? "暫停" : (v.tleft <= 0 ? "再計時一次" : "開始計時");
     $("firstRow").hidden = !(me.host && !v.current && !v.introDone);
-    $("doneBox").hidden = !v.introDone;
-    $("toMatchBtn").hidden = !me.host;
-    $("doneWait").hidden = me.host;
+    $("doneBox").hidden = true;
     var wait = "";
     if (!v.current && !v.introDone && !me.host) wait = "等主持人抽出第一位。";
-    else if (v.current && !control) wait = "現在是 " + v.current + " 的時間，他講完會自己按下一位。";
+    else if (v.current && !control) wait = "現在是 " + v.current + " 的時間，他講完會自己按下一位。" + (me.host ? "計時和換題由你控制。" : "");
     $("introWait").textContent = wait; $("introWait").hidden = !wait;
     playerChips($("introPlayers"), v, "intro");
   }
@@ -753,18 +771,22 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
   $("matchSecs").addEventListener("change", function () { if (me.host) { S.matchSecs = parseInt(this.value, 10); bc(); } });
   $("startBtn").addEventListener("click", function () { if (me.host) startGame(); });
   $("firstBtn").addEventListener("click", function () { act({ t: "next" }); });
-  $("myNextBtn").addEventListener("click", function () { act({ t: "next" }); });
+  $("myNextBtn").addEventListener("click", function () {
+    var typed = $("memoIn").value.trim();
+    if (typed && (!view || typed !== view.curMemo)) act({ t: "memo", text: typed });  // save what they typed first
+    act({ t: "next" });
+  });
   $("timerBtn").addEventListener("click", function () { act({ t: "timer" }); });
   $("rerollBtn").addEventListener("click", function () { act({ t: "reroll" }); });
   $("memoBtn").addEventListener("click", function () { act({ t: "memo", text: $("memoIn").value }); });
   $("memoIn").addEventListener("keydown", function (e) { if (e.key === "Enter") act({ t: "memo", text: $("memoIn").value }); });
-  $("toMatchBtn").addEventListener("click", function () { if (me.host) startMatch(); });
+  $("goBtn").addEventListener("click", function () { if (me.host) startMatch(); });
   $("replayBtn").addEventListener("click", function () {
     if (!me.host) return;
     var playing = Object.keys(S.results).some(function (n) { return S.results[n].status === "playing"; });
     if (playing && !$("replayBtn").dataset.sure) { $("replayBtn").dataset.sure = "1"; $("replayBtn").textContent = "還有人在玩，再按一次確認"; return; }
     delete $("replayBtn").dataset.sure; $("replayBtn").textContent = "再玩一輪";
-    S.introDone = true; startMatch();
+    startMatch();
   });
   $("lobbyBtn").addEventListener("click", function () { if (me.host) backToLobby(); });
   window.addEventListener("beforeunload", function () { leaving = true; });
